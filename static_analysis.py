@@ -28,37 +28,88 @@ def get_all_files(dir_path):
 def static_analysis(dir_path, save_path):
     print(f'Chosen path: {dir_path}')
     files_list = get_all_files(dir_path)
-    
-    for f in files_list:
-        if '.java' in f:
-            extract_classes(open(f'{f}', "r"))
-    
-    
 
+    dir_path = dir_path.replace("\\", "/")
     for f in range(len(files_list)):
         files_list[f] = files_list[f].replace("\\", "/")
-    
-    print(f'All files found: {files_list}')
-    
+
+    java_files = []
+    java_files_abbreviated = []
+
     for f in files_list:
         if '.java' in f:
-            extract_variables(open(f'{f}', "r"), f.split('.java', 1)[0].rsplit('/', 1)[1])
+            java_files.append(f)
+            java_files_abbreviated.append(f'{f}'.split(dir_path, 1)[1])
     
-    for f in files_list:
-        if '.java' in f:
-            extract_methods(open(f'{f}', "r"), f.split('.java', 1)[0].rsplit('/', 1)[1])
+    if len(java_files) < 20:
+        print(f'All .java files found: {java_files_abbreviated}')
+    else:
+        print(f'Found {len(java_files)} .java files!')
     
-    for f in files_list:
-        if '.java' in f:
-            extract_discrete_messages(open(f'{f}', "r"), f.split('.java', 1)[0].rsplit('/', 1)[1])
+    num_files = len(java_files)
     
+    print("Extracting classes... ")
+    i = 0
+    for f in java_files:
+        extract_classes(open(f'{f}', "r", encoding = "utf8"))
+        i += 1
+        if i % (num_files // 100) == 0:
+            print(f'{i * 100 // num_files}% finished')
+        
+    print("Done!\nExtracting variables... ")
+
+    i = 0
+    for f in java_files:
+        extract_variables(open(f'{f}', "r", encoding = "utf8"), f.split('.java', 1)[0].rsplit('/', 1)[1])
+        i += 1
+        if i % (num_files // 100) == 0:
+            print(f'{i * 100 // num_files}% finished')
+        
+    print("Done!\nExtracting methods... ")
+
+    i = 0
+    for f in java_files:
+        extract_methods(open(f'{f}', "r", encoding = "utf8"), f.split('.java', 1)[0].rsplit('/', 1)[1])
+        i += 1
+        if i % (num_files // 100) == 0:
+            print(f'{i * 100 // num_files}% finished')
+    
+    print("Done!\nExtracting discrete messages... ")
+
+    i = 0
+    for f in java_files:
+        extract_discrete_messages(open(f'{f}', "r", encoding = "utf8"), f.split('.java', 1)[0].rsplit('/', 1)[1])
+        i += 1
+        if i % (num_files // 100) == 0:
+            print(f'{i * 100 // num_files}% finished')
+    
+    print("Done!")
+
     # print(class_structure)
     with open(save_path, "w") as outfile:
         json.dump(class_structure, outfile)
+    print("Saved file!")
 
 def extract_discrete_messages(file1, name_class):
     lines = file1.readlines()
     for line in lines:
+        if '//' in line:
+            line = line.split('//', 1)[0]
+        if '* ' in line:
+            line = line.split('* ', 1)[0]
+        if '/*' in line:
+            line = line.split('/*', 1)[0]
+        if '*/' in line:
+            line = line.split('*/', 1)[0]
+        
+        line = line.strip()
+
+        if name_class not in class_structure:
+            return
+
+        if 'variables' not in class_structure[name_class]:
+            return
+        
         for variable_info in class_structure[name_class]['variables']:
             if f'{variable_info["name"]}' in line:
                 for class_method in class_structure[variable_info['type']]['methods']:
@@ -74,6 +125,17 @@ def extract_methods(file1, name_class):
     lines = file1.readlines()
 
     for line in lines:
+        if '//' in line:
+            line = line.split('//', 1)[0]
+        if '* ' in line:
+            line = line.split('* ', 1)[0]
+        if '/*' in line:
+            line = line.split('/*', 1)[0]
+        if '*/' in line:
+            line = line.split('*/', 1)[0]
+        
+        line = line.strip()
+        
         if '(' in line and ";" not in line:
             curr_line = line
             method = {}
@@ -108,12 +170,74 @@ def extract_classes(file1):
     lines = file1.readlines()
     scope_level = 0
     class_name : str = None
-
+    commented_out = False
     for line in lines:
-        if 'class' in line and 'public' in line:
-            class_name = line.split('class ', 1)[1].split(' ', 1)[0]
+
+        orig_line = line
+
+        if '//' in line:
+            line = line.split('//', 1)[0]
+        if '* ' in line:
+            line = line.split('* ', 1)[0]
+        if '/*' in line:
+            line = line.split('/*', 1)[0]
+        if '*/' in line:
+            line = line.split('*/', 1)[0]
+        
+        line = line.strip()
+        
+        if commented_out:
+            if '*/' in orig_line:
+                commented_out = False
+            else:
+                continue
+
+        if 'class ' in line and 'private ' not in line and '.class' not in line:
+            try:
+                class_name = line.split('class ', 1)[1].split(' ', 1)[0]
+            except Exception as e:
+                print(e)
+                print(line)
+                quit()
+            
+            if "<" in class_name:
+                class_name = class_name.split("<", 1)[0]
+            
             class_structure[class_name] = {}
-            if 'extends' in line:
+            if 'extends ' in line:
+                extends = line.split('extends ', 1)[1]
+                if ' ' in extends:
+                    extends = extends.split(' ', 1)[0]
+                elif '{' in extends:
+                    extends = extends.split('{', 1)[0]
+                class_structure[class_name]['extends'] = extends
+            
+            if 'implements ' in line:
+                implements = line.split('implements ', 1)[1]
+                if ' ' in implements:
+                    implements = implements.split(' ', 1)[0]
+                elif '{' in extends:
+                    implements = implements.split('{', 1)[0]
+                class_structure[class_name]['implements'] = implements
+            
+            class_structure[class_name]['variables'] = []
+            class_structure[class_name]['methods'] = []
+            class_structure[class_name]['discrete_messages'] = {}
+            break
+
+        if 'enum ' in line and 'private ' not in line:
+            try:
+                class_name = line.split('enum ', 1)[1].split(' ', 1)[0]
+            except Exception as e:
+                print(e)
+                print(line)
+                quit()
+            
+            if "<" in class_name:
+                class_name = class_name.split("<", 1)[0]
+            
+            class_structure[class_name] = {}
+            if 'extends ' in line:
                 extends = line.split('extends ', 1)[1]
                 if ' ' in extends:
                     extends = extends.split(' ', 1)[0]
@@ -125,6 +249,59 @@ def extract_classes(file1):
             class_structure[class_name]['methods'] = []
             class_structure[class_name]['discrete_messages'] = {}
             break
+
+        if 'interface ' in line and 'private ' not in line:
+            try:
+                class_name = line.split('interface ', 1)[1].split(' ', 1)[0]
+            except Exception as e:
+                print(e)
+                print(line)
+                quit()
+            
+            if "<" in class_name:
+                class_name = class_name.split("<", 1)[0]
+            
+            class_structure[class_name] = {}
+            if 'extends ' in line:
+                extends = line.split('extends ', 1)[1]
+                if ' ' in extends:
+                    extends = extends.split(' ', 1)[0]
+                elif '{' in extends:
+                    extends = extends.split('{', 1)[0]
+                class_structure[class_name]['extends'] = extends
+            
+            class_structure[class_name]['variables'] = []
+            class_structure[class_name]['methods'] = []
+            class_structure[class_name]['discrete_messages'] = {}
+        
+        if 'record ' in line and 'private ' not in line:
+            try:
+                class_name = line.split('record ', 1)[1].split('(', 1)[0]
+            except Exception as e:
+                print(e)
+                print(line)
+                quit()
+            
+            if "<" in class_name:
+                class_name = class_name.split("<", 1)[0]
+            
+            class_structure[class_name] = {}
+            if 'extends ' in line:
+                extends = line.split('extends ', 1)[1]
+                if ' ' in extends:
+                    extends = extends.split(' ', 1)[0]
+                elif '{' in extends:
+                    extends = extends.split('{', 1)[0]
+                class_structure[class_name]['extends'] = extends
+            
+            class_structure[class_name]['variables'] = []
+            class_structure[class_name]['methods'] = []
+            class_structure[class_name]['discrete_messages'] = {}
+        if "/*" in orig_line:
+            commented_out = True
+        if "*/" in orig_line:
+            commented_out = False
+            
     
 
 def extract_variables(file1, name_class):
@@ -142,8 +319,16 @@ def extract_variables(file1, name_class):
     for line in lines:
         orig_line = line
 
-        if "//" in line:
-            line = line.split("//", 1)[0]
+        line = line.strip()
+
+        if '//' in line:
+            line = line.split('//', 1)[0]
+        if '* ' in line:
+            line = line.split('* ', 1)[0]
+        if '/*' in line:
+            line = line.split('/*', 1)[0]
+        if '*/' in line:
+            line = line.split('*/', 1)[0]
         
         if " =" in line:
             line = line.split(" =", 1)[0]
@@ -154,18 +339,20 @@ def extract_variables(file1, name_class):
         if "\n" in line:
             line = line.split("\n", 1)[0]
         
-        
-        
-        
         check = False
 
-        for item2 in class_structure.keys():
-            if item2 in line:
+        for item2 in line.split(" "):
+            if "[" in item2:
+                item2 = item2.split("[", 1)[0]
+            if "<" in item2:
+                item2 = item2.split("<", 1)[0]
+            
+            if item2 in class_structure:
                 check = True
         
         check2 = False
 
-        if '(' not in line and ')' not in line:
+        if '(' not in line:
             check2 = True
         
         # print(f'{orig_line} - {check} and {check2} and {";" in orig_line}')
@@ -195,9 +382,9 @@ def extract_variables(file1, name_class):
             if variable['visibility'] != "":
                 line_split = line.split(variable['visibility'], 1)[1]
 
-            if 'static' in line_split:
+            if 'static ' in line_split:
                 variable['static'] = True
-                line_split = line_split.split(variable['static'])
+                line_split = line_split.split("static ")[1]
             else:
                 variable['static'] = False
             
@@ -218,6 +405,9 @@ def extract_variables(file1, name_class):
                     # print(f'{line_split}')
                     line_split = line_split.rsplit(' ', 1)[1]
                     break
+            
+            if not variable['type']:
+                continue
             
             
             # print(line_split)
