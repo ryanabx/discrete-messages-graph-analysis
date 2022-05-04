@@ -8,8 +8,8 @@ library(networkR)
 # memory.limit()
 # memory.limit(size=56000)
 
-f <- read.table(file = "./GitHub/java-discrete-messages-analysis/data/guavagraph.txt")
-f2 <- read.table(file = "./GitHub/java-discrete-messages-analysis/data/guavanames.txt")
+f <- read.table(file = "./GitHub/discrete-messages-graph-analysis/data/guavagraph.txt")
+f2 <- read.table(file = "./GitHub/discrete-messages-graph-analysis/data/guavanames.txt")
 
 n <- max(f$V1)
 n2 <- max(f$V3)
