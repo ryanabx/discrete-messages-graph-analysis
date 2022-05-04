@@ -22,14 +22,16 @@ def save_graph_as_dict(RESULT_PATH = "", SAVE_PATH = ""):
         json.dump(context, outfile)
 
 # Graph is saved as Node1 Weight Node2
-def save_graph_as_txt(RESULT_PATH = "", TXT_PATH = "", DICT_PATH = ""):
+def save_graph_as_txt(RESULT_PATH = "", TXT_PATH = "", TXT2_PATH = "", DICT_PATH = ""):
     context = construct_graph_text(RESULT_PATH)
 
     f = open(TXT_PATH, "w")
+    f2 = open(TXT2_PATH, "w")
 
     name_to_num = {}
     i = 1
     for class_name in context:
+        f2.write(f'{class_name}\n')
         name_to_num[class_name] = i
         i += 1
     
@@ -38,6 +40,7 @@ def save_graph_as_txt(RESULT_PATH = "", TXT_PATH = "", DICT_PATH = ""):
             f.write(f'{name_to_num[class_name]} {context[class_name][class_name_2]} {name_to_num[class_name_2]}\n')
     
     f.close()
+    f2.close()
 
     with open(DICT_PATH, "w") as outfile:
         json.dump(name_to_num, outfile)
@@ -50,9 +53,11 @@ def main():
     result_dir = input()
     print("\nEnter the result txt file path: ", end = '')
     txt_dir = input()
+    print("\nEnter the result names txt file path: ", end = '')
+    txt2_dir = input()
     print("\nEnter the result json file path: ", end = '')
     json_dir = input()
-    save_graph_as_txt(result_dir, txt_dir, json_dir)
+    save_graph_as_txt(result_dir, txt_dir, txt2_dir, json_dir)
     print("Done!")
 
 if __name__ == "__main__":

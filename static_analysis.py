@@ -461,9 +461,9 @@ def main():
     print("Static Code Analysis for Number of Discrete Messages Between Classes")
     print("Enter the directory to check Java code from. (The code will do a search of ALL SUBDIRECTORIES): ", end = '')
     curr_directory = input()
-    print("\nEnter the path for the resulting file to go in: ", end = '')
+    print("\nEnter the path and name for the results file (JSON): ", end = '')
     save_dir = input()
-    static_analysis(curr_directory, f'{save_dir}/result.json')
+    static_analysis(curr_directory, f'{save_dir}')
     print("Done!")
 
 if __name__ == "__main__":

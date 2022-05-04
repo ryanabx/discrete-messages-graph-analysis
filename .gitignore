@@ -3,3 +3,4 @@ result.json
 test.py
 graph.json
 graph.txt
+*.txt
